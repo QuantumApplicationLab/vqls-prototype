@@ -8,7 +8,7 @@
 
 # Variational Quantum Linear Solver Prototype
 
-This repository contains a prototype implementation of the variational quantum linear solver [1,2]. VQLS allows to solve linear systems, $A\times x = b$, using variational circuits. 
+This repository contains a prototype implementation of the variational quantum linear solver [1,2] that allows to solve linear systems, $A\times x = b$, using variational circuits. 
 
 ![VQLS Solving a 4x4 linear system](./docs/sol.gif)
 ### Table of Contents
