@@ -276,7 +276,7 @@ class SymmetricDecomposition(MatrixDecomposition):
 
     @staticmethod
     def auxilliary_matrix(
-        x: Union[npt.NDArray[np.float_], complex_array_type]
+        x: Union[npt.NDArray[np.float64], complex_array_type]
     ) -> complex_array_type:
         """Returns the auxiliary matrix for the decomposition of size n.
            and derfined as defined as : i * sqrt(I - x^2)
@@ -288,7 +288,7 @@ class SymmetricDecomposition(MatrixDecomposition):
             complex_array_type: The auxiliary matrix.
         """
         mat = np.eye(len(x)) - x @ x
-        mat = cast(npt.NDArray[Union[np.float_, np.cdouble]], spla.sqrtm(mat))
+        mat = cast(npt.NDArray[Union[np.float64, np.cdouble]], spla.sqrtm(mat))
         return 1.0j * mat
 
     def decompose_matrix(
@@ -464,7 +464,7 @@ class PauliDecomposition(MatrixDecomposition):
             coef: complex_array_type = self._get_pauli_coefficient(
                 self.matrix, pauli_string, self.sparse_matrix
             )
-            if coef * np.conj(coef) != 0:
+            if not np.isclose(coef * np.conj(coef), 0):
                 self.strings.append(pauli_string)
                 coeffs.append(prefactor * coef)
                 circuits.append(self._create_circuit(pauli_string))
