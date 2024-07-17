@@ -8,27 +8,24 @@ version = "0.2.0"
 # ]
 readme = "README.md"
 requires-python = ">=3.8"
-license = {file = "LICENSE.txt"}
+license = { file = "LICENSE.txt" }
 description = "Repository for a quantum prototype"
-authors = [
-   { name = "Nicolas Renaud", email = "nicolas.gm.renaud@gmail.com"},
-]
+authors = [{ name = "Nicolas Renaud", email = "nicolas.gm.renaud@gmail.com" }]
 
 dependencies = [
     "certifi>=2021.5.30",
     "importlib_metadata>=4.8.1",
-    "qiskit-aer>=0.10.3",
-    "qiskit>=0.44",
-    "qiskit_experiments>=0.5.3",
-    "qiskit_ibm_runtime>=0.9.3",
-    "qiskit_algorithms>=0.2.1",
+    "qiskit>=1.0.0",
+    "qiskit_experiments>=0.7.0",
+    "qiskit_ibm_runtime>=0.25.0",
+    "qiskit_algorithms>=0.3.10",
     "ipykernel>=6.15.0",
     "matplotlib>=3.5.3",
     "pylatexenc>=2.10",
     "tqdm>=4.64.1",
     "networkx>=2.8.4",
     "sparse>=0.14.0",
-    "treelib"
+    "treelib",
 ]
 
 [project.optional-dependencies]
@@ -57,12 +54,7 @@ dev = [
 "Bug Tracker" = "https://github.com/QuantumApplicationLab/vqls-prototype/issues"
 
 [build-system]
-requires = [
-    "setuptools>=61.0",
-    "wheel",
-    "toml",
-    "setuptools-scm",
-]
+requires = ["setuptools>=61.0", "wheel", "toml", "setuptools-scm"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
