@@ -4582,7 +4582,7 @@ wheels = [
 
 [[package]]
 name = "vqls-prototype"
-version = "0.2.0"
+version = "0.4.0"
 source = { editable = "." }
 dependencies = [
     { name = "certifi" },
@@ -4593,6 +4593,8 @@ dependencies = [
     { name = "networkx", version = "3.2.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
     { name = "networkx", version = "3.4.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.10.*'" },
     { name = "networkx", version = "3.5", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "numba", version = "0.60.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
+    { name = "numba", version = "0.61.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
     { name = "pylatexenc" },
     { name = "qiskit" },
     { name = "qiskit-aer" },
@@ -4637,6 +4639,7 @@ requires-dist = [
     { name = "nbqa", marker = "extra == 'dev'", specifier = ">=1.1.1" },
     { name = "nbsphinx", marker = "extra == 'dev'", specifier = ">=0.8.8" },
     { name = "networkx", specifier = ">=2.8.4" },
+    { name = "numba", specifier = ">=0.57.0" },
     { name = "pylatexenc", specifier = ">=2.10" },
     { name = "pylint", marker = "extra == 'dev'", specifier = ">=2.9.5" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=6.2.5" },
@@ -4648,7 +4651,7 @@ requires-dist = [
     { name = "qiskit-ibm-runtime", specifier = ">=0.35" },
     { name = "qiskit-sphinx-theme", marker = "extra == 'dev'", specifier = "~=1.16.0" },
     { name = "reno", marker = "extra == 'dev'", specifier = ">=3.5.0" },
-    { name = "sparse", specifier = ">=0.14.0" },
+    { name = "sparse", specifier = ">=0.15.0" },
     { name = "sphinx-autodoc-typehints", marker = "extra == 'dev'", specifier = ">=1.17.0" },
     { name = "tqdm", specifier = ">=4.64.1" },
     { name = "treelib" },
