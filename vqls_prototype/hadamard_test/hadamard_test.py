@@ -1,6 +1,6 @@
-"""Hadammard test."""
+"""Hadamard test."""
 
-from typing import Optional, List, Union
+from typing import Optional, List, Union, Tuple
 from qiskit import QuantumCircuit
 from qiskit_algorithms.exceptions import AlgorithmError
 from qiskit.quantum_info import Operator
@@ -13,8 +13,8 @@ from qiskit.primitives.containers import PrimitiveResult
 from vqls_prototype.primitives_run_builder import EstimatorRunBuilder
 
 
-class BatchHadammardTest:
-    r"""Class that execute batches of Hadammard Test"""
+class BatchHadamardTest:
+    r"""Class that execute batches of Hadamard Test"""
 
     def __init__(self, hdmr_list: List):
         """Create a single container that computes many hadamard tests
@@ -28,17 +28,13 @@ class BatchHadammardTest:
         self.post_processing = hdmr_list[0].post_processing
         self.shots = hdmr_list[0].shots
 
-    def get_values(self, primitive, parameter_sets: List, zne_strategy=None) -> List:
-        """Compute the value of the test
+    def get_values(self, primitive, parameter_sets: List, zne_strategy=None, return_raw_result: bool = False) -> Union[
+        List, Tuple[List, object, object]]:
+        """Compute the value(s) of the test.
 
-        Args:
-            estimator (Estimator): an estimator instance
-            parameter_sets (List): The list of parameter values for the circuit
-
-        Returns:
-            List: values of the batched Hadammard Tests
+        If return_raw_result is True, return a tuple (values_array, primitive_result_object, job_object).
+        Otherwise return values_array (existing behaviour).
         """
-
         ncircuits = len(self.circuits)
         all_parameter_sets = [parameter_sets] * ncircuits
 
@@ -62,16 +58,22 @@ class BatchHadammardTest:
                     zne_strategy=zne_strategy,
                 )
 
-            results = self.post_processing(job.result())
+            primitive_result = job.result()
+            results = self.post_processing(primitive_result)
         except Exception as exc:
             raise AlgorithmError(
                 "The primitive to evaluate the Hadammard Test failed!"
             ) from exc
+
         results *= np.array([1.0, 1.0j] * (ncircuits // 2))
-        return results.reshape(-1, 2).sum(1).reshape(-1)
+        results = results.reshape(-1, 2).sum(1).reshape(-1)
+
+        if return_raw_result:
+            return results, primitive_result, job
+        return results
 
 
-class HadammardTest:
+class HadamardTest:
     r"""Class to compute the Hadamard Test"""
 
     def __init__(

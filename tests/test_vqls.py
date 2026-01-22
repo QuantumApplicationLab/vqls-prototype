@@ -18,7 +18,7 @@ import unittest
 import numpy as np
 
 from qiskit import QuantumCircuit
-from qiskit.circuit.library import RealAmplitudes
+from qiskit.circuit.library import real_amplitudes
 from qiskit.primitives import Estimator, Sampler
 
 from qiskit_algorithms.optimizers import ADAM
@@ -70,7 +70,7 @@ class TestVQLS(unittest.TestCase):
         )
 
         rhs = np.array([0.1] * 4)
-        ansatz = RealAmplitudes(num_qubits=2, reps=3, entanglement="full")
+        ansatz = real_amplitudes(num_qubits=2, reps=3, entanglement="full")
 
         for _, (estimator, sampler) in enumerate(zip(self.estimators, self.samplers)):
             for _, opt in enumerate(self.options):
@@ -87,7 +87,7 @@ class TestVQLS(unittest.TestCase):
         """Test the VQLS on circuits input using statevector simulator."""
 
         num_qubits = 2
-        ansatz = RealAmplitudes(num_qubits=num_qubits, reps=3, entanglement="full")
+        ansatz = real_amplitudes(num_qubits=num_qubits, reps=3, entanglement="full")
 
         rhs = QuantumCircuit(num_qubits)
         rhs.h(0)

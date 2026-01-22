@@ -29,7 +29,7 @@ from ..matrix_decomposition.optimized_matrix_decomposition import (
 
 from ..hadamard_test.direct_hadamard_test import (
     DirectHadamardTest,
-    BatchDirectHadammardTest,
+    BatchDirectHadamardTest,
 )
 from ..tomography.qst import FullQST
 from ..tomography.simulator_qst import SimulatorQST
@@ -177,7 +177,7 @@ class Hybrid_QST_VQLS(BaseSolver):
         matrix: Union[np.ndarray, QuantumCircuit, List],
         vector: Union[np.ndarray, QuantumCircuit],
     ) -> Tuple[List[QuantumCircuit], List[QuantumCircuit]]:
-        """Returns the a list of circuits required to compute the expectation value
+        """Returns the list of circuits required to compute the expectation value
 
         Args:
             matrix (Union[np.ndarray, QuantumCircuit, List]): matrix of the linear system
@@ -325,7 +325,7 @@ class Hybrid_QST_VQLS(BaseSolver):
             circuits = norm_circuits + overlap_circuits
 
             # sample the unique circuits
-            samples = BatchDirectHadammardTest(circuits).get_values(
+            samples = BatchDirectHadamardTest(circuits).get_values(
                 self.sampler, parameters
             )
 
@@ -465,14 +465,12 @@ class Hybrid_QST_VQLS(BaseSolver):
         Args:
             matrix (Union[List, np.ndarray, QuantumCircuit]): matrix of the linear system
             vector (Union[np.ndarray, QuantumCircuit]): rhs of the linear system
-            options (Union[Dict, None]): options for the calculation of the cost function
 
         Returns:
             VariationalLinearSolverResult: Result of the optimization
                 and solution vector of the linear system
         """
-
-        # intiialize the tomography
+        # initialize the tomography
         self._init_tomography(self.options["tomography"])
 
         # compute the circuits needed for the hadamard tests
@@ -522,7 +520,7 @@ class Hybrid_QST_VQLS(BaseSolver):
         solution.state = self.ansatz.assign_parameters(solution.optimal_parameters)
 
         # solution vector
-        samples = BatchDirectHadammardTest(norm_circuits).get_values(
+        samples = BatchDirectHadamardTest(norm_circuits).get_values(
             self.sampler, solution.optimal_point
         )
         solution.vector = self.tomography_calculator.get_statevector(  # type: ignore

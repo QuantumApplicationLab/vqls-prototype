@@ -14,14 +14,14 @@
 import unittest
 import numpy as np
 
-from qiskit.circuit.library import RealAmplitudes
+from qiskit.circuit.library import real_amplitudes
 from qiskit_algorithms import optimizers as opt
 from qiskit.primitives import Estimator, Sampler
 from vqls_prototype import VQLS, VQLSLog, Hybrid_QST_VQLS
 
 
-from vqls_prototype.hadamard_test.hadamard_test import BatchHadammardTest
-from vqls_prototype.hadamard_test.direct_hadamard_test import BatchDirectHadammardTest
+from vqls_prototype.hadamard_test.hadamard_test import BatchHadamardTest
+from vqls_prototype.hadamard_test.direct_hadamard_test import BatchDirectHadamardTest
 
 
 class TestHadamard(unittest.TestCase):
@@ -37,7 +37,7 @@ class TestHadamard(unittest.TestCase):
         # define ansatz
         num_qubits = 2
         size = 2**num_qubits
-        self.ansatz = RealAmplitudes(num_qubits=num_qubits, reps=3, entanglement="full")
+        self.ansatz = real_amplitudes(num_qubits=num_qubits, reps=3, entanglement="full")
 
         # define ref vqls
         self.vqls = VQLS(
@@ -56,7 +56,7 @@ class TestHadamard(unittest.TestCase):
         self.vector = np.random.rand(size)
         self.vector /= np.linalg.norm(self.vector)
 
-        # compute the cricuits
+        # compute the circuits
         hdmr_tests_norm, hdmr_tests_overlap = self.vqls.construct_circuit(
             self.matrix, self.vector
         )
@@ -65,10 +65,10 @@ class TestHadamard(unittest.TestCase):
         self.parameters = np.random.rand(self.ansatz.num_parameters)
 
         # compute the reference values of the hadamard tests
-        self.norm_ref = BatchHadammardTest(hdmr_tests_norm).get_values(
+        self.norm_ref = BatchHadamardTest(hdmr_tests_norm).get_values(
             self.estimator, self.parameters
         )
-        self.overlap_ref = BatchHadammardTest(hdmr_tests_overlap).get_values(
+        self.overlap_ref = BatchHadamardTest(hdmr_tests_overlap).get_values(
             self.estimator, self.parameters
         )
 
@@ -99,7 +99,7 @@ class TestHadamard(unittest.TestCase):
         )
 
         # compute the reference values of the hadamard tests norm
-        norm = BatchHadammardTest(hdmr_tests_norm).get_values(
+        norm = BatchHadamardTest(vqls.hdmr_tests_norm).get_values(
             self.estimator, self.parameters
         )
         norm = vqls.matrix_circuits.post_process_contracted_norm_values(norm)
@@ -109,7 +109,7 @@ class TestHadamard(unittest.TestCase):
         # assert np.allclose(norm, self.norm_ref, atol=1E-6, rtol=1E-6)
 
         # compute the reference values of the hadamard tests overlap
-        overlap = BatchHadammardTest(hdmr_tests_overlap).get_values(
+        overlap = BatchHadamardTest(hdmr_tests_overlap).get_values(
             self.estimator, self.parameters
         )
         assert np.allclose(overlap, self.overlap_ref)
@@ -151,7 +151,7 @@ class TestHadamard(unittest.TestCase):
         qst_vqls.vector_pauli_product = qst_vqls.get_vector_pauli_product()
 
         # compute the reference values of the hadamard tests
-        samples = BatchDirectHadammardTest(circuits).get_values(
+        samples = BatchDirectHadamardTest(circuits).get_values(
             self.sampler, self.parameters
         )
 

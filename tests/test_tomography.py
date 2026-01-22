@@ -15,7 +15,7 @@ import numpy as np
 
 
 from qiskit_aer import Aer
-from qiskit.circuit.library import RealAmplitudes
+from qiskit.circuit.library import real_amplitudes
 from qiskit.primitives import Sampler
 
 from vqls_prototype.tomography import FullQST, SimulatorQST, HTreeQST, ShadowQST
@@ -27,7 +27,7 @@ class TestTomography(unittest.TestCase):
 
         # define ansatz
         num_qubits = 2
-        self.ansatz = RealAmplitudes(num_qubits=num_qubits, reps=3, entanglement="full")
+        self.ansatz = real_amplitudes(num_qubits=num_qubits, reps=3, entanglement="full")
         self.parameters = 2 * np.pi * np.random.rand(self.ansatz.num_parameters)
 
         self.ref = SimulatorQST(self.ansatz).get_relative_amplitude_sign(
@@ -35,7 +35,7 @@ class TestTomography(unittest.TestCase):
         )
 
     def test_full_qst(self):
-        backend = Aer.get_backend("statevector_simulator")
+        backend = Aer.get_backend("aer_simulator_statevector")
         _ = FullQST(self.ansatz, backend, shots=10000)
         # this test fails on GH actions but not locally ...
         # sol = full_qst.get_relative_amplitude_sign(self.parameters)
