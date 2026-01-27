@@ -16,7 +16,7 @@
 import unittest
 
 import numpy as np
-from qiskit.circuit.library import RealAmplitudes
+from qiskit.circuit.library import real_amplitudes
 
 from qiskit_algorithms.optimizers import COBYLA
 from qiskit.primitives import Estimator, Sampler
@@ -56,14 +56,14 @@ class TestQSTVQLS(unittest.TestCase):
         )
 
         rhs = np.array([0.1] * 4)
-        ansatz = RealAmplitudes(num_qubits=2, reps=3, entanglement="full")
+        ansatz = real_amplitudes(num_qubits=2, reps=3, entanglement="full")
 
         for estimator, sampler in zip(self.estimators, self.samplers):
             for opt in self.options:
                 vqls = QST_VQLS(
                     estimator,
                     ansatz,
-                    COBYLA(maxiter=2, disp=True),
+                    COBYLA(maxiter=10, disp=True),
                     options=opt,
                     sampler=sampler,
                 )

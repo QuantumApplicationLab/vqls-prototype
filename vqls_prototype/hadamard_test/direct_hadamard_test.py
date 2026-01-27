@@ -9,14 +9,14 @@ from qiskit.primitives.containers import PrimitiveResult
 from vqls_prototype.primitives_run_builder import SamplerRunBuilder
 
 
-class BatchDirectHadammardTest:
-    r"""Class that execute batches of Hadammard Test"""
+class BatchDirectHadamardTest:
+    r"""Class that execute batches of Hadamard Test"""
 
     def __init__(self, hdmr_list: List):
         """Create a single container that computes many hadamard tests
 
         Args:
-            hdrm_list (List): A list of DirectHadamardTest instances
+            hdmr_list (List): A list of DirectHadamardTest instances
         """
         self.hdmr_list = hdmr_list
         self.circuits = [hdmr.circuits for hdmr in hdmr_list]
@@ -27,8 +27,8 @@ class BatchDirectHadammardTest:
         """Compute the value of the test
 
         Args:
-            sampler (Estimator): an sampler instance
-            parameter_sets (List): The list of parameter values for the circuit
+            sampler: an sampler instance
+            parameter_sets: The list of parameter values for the circuit
 
         Returns:
             List: values of the batched Hadammard Tests
@@ -91,8 +91,8 @@ class DirectHadamardTest:
         if apply_initial_state is not None:
             if apply_initial_state.num_qubits != operators.num_qubits:
                 raise ValueError(
-                    "The operator and the initial state circuits \
-                        have different numbers of qubits"
+                    "The operator and the initial state circuits "
+                    "have different numbers of qubits"
                 )
 
         # build the circuits
@@ -112,16 +112,11 @@ class DirectHadamardTest:
         """build the quantum circuits
 
         Args:
-            operators (List[QuantumCircuit]): quantum circuit or list of quantum circuits
-                representing the U.
-            use_barrier (bool): introduce barriers in the description of the circuits.
-            apply_initial_state (Optional[QuantumCircuit], optional): Quantum Circuit to
-                create |Psi> from |0>. If None, assume that the qubits are alredy in Psi.
-                Defaults to None.
-
+            operator: quantum circuit representing the operator.
+            apply_initial_state: optional circuit creating the initial state.
 
         Returns:
-            QuantumCircuit: quamtum circuit required to compute the Hadammard Test.
+            QuantumCircuit: circuit required to compute the Hadamard Test.
         """
         if apply_initial_state is not None:
             circuit = apply_initial_state.compose(operator)
@@ -136,10 +131,10 @@ class DirectHadamardTest:
         """Post process the sampled values of the circuits
 
         Args:
-            sampler_result (results): Result of the sampler
+            sampler_result: Result of the sampler
 
         Returns:
-            List: value of the overlap hadammard test
+            Complex numpy array of sampled distributions.
         """
         if isinstance(sampler_result, SamplerResult):
             quasi_dist = sampler_result.quasi_dists
@@ -176,11 +171,11 @@ class DirectHadamardTest:
         """Compute the value of the test
 
         Args:
-            sampler (sampler): a sampler instance
-            parameter_sets (List): The list of parameter values for the circuit
+            sampler: a sampler instance
+            parameter_sets: The list of parameter values for the circuit
 
         Returns:
-            List: value of the test
+            numpy array: measurement results array
         """
         sampler_run_builder = SamplerRunBuilder(
             sampler,

@@ -24,12 +24,6 @@ EstimatorValidType = Union[
 class EstimatorRunBuilder(BasePrimitiveRunBuilder):  # pylint: disable=abstract-method
     """
     A class to build and configure estimator runs based on their provenance and options.
-
-    Attributes:
-        estimator (EstimatorValidType): The quantum estimator instance.
-        circuits (List[QuantumCircuit]): List of quantum circuits.
-        observables (List[SparsePauliOp]): List of observables.
-        parameter_sets (List[List[float]]): List of parameter sets.
     """
 
     def __init__(  # pylint: disable=too-many-arguments
@@ -43,13 +37,6 @@ class EstimatorRunBuilder(BasePrimitiveRunBuilder):  # pylint: disable=abstract-
         """
         Initializes the EstimatorRunBuilder with the given estimator, circuits, observables,
         parameter sets, and options.
-
-        Args:
-            estimator (EstimatorValidType): The estimator to use for runs.
-            circuits (List[QuantumCircuit]): The quantum circuits to run.
-            observables (List[SparsePauliOp]): The observables to measure.
-            parameter_sets (List[List[float]]): The parameters to vary in the circuits.
-            options (Dict[str, Any]): Configuration options such as number of shots.
         """
         super().__init__(estimator, circuits, parameter_sets, options)
         self.observables = observables
@@ -61,6 +48,7 @@ class EstimatorRunBuilder(BasePrimitiveRunBuilder):  # pylint: disable=abstract-
             ("qiskit_aer", "Estimator"): self._build_v1_run,
             ("qiskit_ibm_runtime", "EstimatorV2"): self._build_v2_run,
             ("qiskit_ibm_runtime", "EstimatorV1"): self._build_v1_run,
+            ("qiskit", "BackendEstimatorV2"): self._build_v2_run,   #todo: more robust implementation of this
         }
         try:
             return builders[self.provenance]

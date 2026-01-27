@@ -2,20 +2,22 @@
 # Ref :
 # Tutorial :
 
-
 """Variational Quantum Linear Solver
 
 See https://arxiv.org/abs/1909.05820
 """
 from typing import Optional, Union, List, Callable, Dict, Tuple
 import numpy as np
+import time
+import logging
 
 from qiskit import QuantumCircuit
-from qiskit.primitives import BaseEstimator, BaseSampler
+from qiskit.primitives import BaseEstimatorV1, BaseSamplerV1
 from qiskit_algorithms.utils import validate_bounds
 from qiskit.quantum_info import Statevector
 from qiskit_algorithms.optimizers import Minimizer, Optimizer
 from qiskit_algorithms.gradients import BaseEstimatorGradient
+from qiskit import transpile
 
 from .variational_linear_solver import (
     VariationalLinearSolverResult,
@@ -31,21 +33,24 @@ from ..matrix_decomposition.optimized_matrix_decomposition import (
     ContractedPauliDecomposition,
 )
 from ..hadamard_test.hadamard_test import (
-    HadammardTest,
-    BatchHadammardTest,
+    HadamardTest,
+    BatchHadamardTest,
 )
 
 from ..hadamard_test.hadamard_overlap_test import (
-    HadammardOverlapTest,
+    HadamardOverlapTest,
     BatchHadammardOverlapTest,
 )
 
 from ..hadamard_test.direct_hadamard_test import (
     DirectHadamardTest,
-    BatchDirectHadammardTest,
+    BatchDirectHadamardTest,
 )
 from .validation import validate_initial_point
 from .base_solver import BaseSolver
+
+# module logger
+logger = logging.getLogger(__name__)
 
 
 class VQLS(BaseSolver):
@@ -55,110 +60,19 @@ class VQLS(BaseSolver):
     as, given a matrix :math:`A\in\mathbb{C}^{N\times N}` and a vector
     :math:`\vec{b}\in\mathbb{C}^{N}`, find :math:`\vec{x}\in\mathbb{C}^{N}` satisfying
     :math:`A\vec{x}=\vec{b}`.
-
-    Examples:
-
-        .. jupyter-execute:
-
-            from qalcore.qiskit.vqls.vqls import VQLS, VQLSLog
-            from qiskit.circuit.library.n_local.real_amplitudes import RealAmplitudes
-            from qiskit_algorithms import optimizers as opt
-            from qiskit_aer import Aer, BasicAer
-            import numpy as np
-
-            from qiskit.quantum_info import Statevector
-            import matplotlib.pyplot as plt
-            from qiskit.primitives import Estimator, Sampler, BackendEstimator
-
-            # create random symmetric matrix
-            A = np.random.rand(4, 4)
-            A = A + A.T
-
-            # create rhight hand side
-            b = np.random.rand(4)
-
-            # solve using numpy
-            classical_solution = np.linalg.solve(A, b / np.linalg.norm(b))
-            ref_solution = classical_solution / np.linalg.norm(classical_solution)
-
-            # define the wave function ansatz
-            ansatz = RealAmplitudes(2, entanglement="full", reps=3, insert_barriers=False)
-
-            # define backend
-            backend = BasicAer.get_backend("statevector_simulator")
-
-            # define an estimator primitive
-            estimator = Estimator()
-
-            # define the logger
-            log = VQLSLog([],[])
-
-            # create the solver
-            vqls = VQLS(
-                estimator,
-                ansatz,
-                opt.CG(maxiter=200),
-                callback=log.update
-            )
-
-            # solve
-            res = vqls.solve(A, b, opt)
-            vqls_solution = np.real(Statevector(res.state).data)
-
-            # plot solution
-            plt.scatter(ref_solution, vqls_solution)
-            plt.plot([-1, 1], [-1, 1], "--")
-            plt.show()
-
-            # plot cost function
-            plt.plot(log.values)
-            plt.ylabel('Cost Function')
-            plt.xlabel('Iterations')
-            plt.show()
-
-    References:
-
-        [1] Carlos Bravo-Prieto, Ryan LaRose, M. Cerezo, Yigit Subasi, Lukasz Cincio,
-        Patrick J. Coles. Variational Quantum Linear Solver
-        `arXiv:1909.05820 <https://arxiv.org/abs/1909.05820>`
     """
 
     def __init__(
         self,
-        estimator: BaseEstimator,
+        estimator: BaseEstimatorV1,
         ansatz: QuantumCircuit,
         optimizer: Union[Optimizer, Minimizer],
-        sampler: Optional[Union[BaseSampler, None]] = None,
+        sampler: Optional[Union[BaseSamplerV1, None]] = None,
         initial_point: Optional[Union[np.ndarray, None]] = None,
         gradient: Optional[Union[BaseEstimatorGradient, Callable, None]] = None,
         max_evals_grouped: Optional[int] = 1,
         options: Optional[Union[Dict, None]] = None,
     ) -> None:
-        r"""
-        Args:
-            estimator: an Estimator primitive to compute the expected values of the
-                quantum circuits needed for the cost function
-            ansatz: A parameterized circuit used as Ansatz for the wave function.
-            optimizer: A classical optimizer. Can either be a Qiskit optimizer or a callable
-                that takes an array as input and returns a Qiskit or SciPy optimization result.
-            sampler: a Sampler primitive to sample the output of some quantum circuits needed to
-                compute the cost function. This is only needed if overal Hadammard tests are used.
-            initial_point: An optional initial point (i.e. initial parameter values)
-                for the optimizer. If ``None`` then VQLS will look to the ansatz for a preferred
-                point and if not will simply compute a random one.
-            gradient: An optional gradient function or operator for optimizer.
-            max_evals_grouped: Max number of evaluations performed simultaneously. Signals the
-                given optimizer that more than one set of parameters can be supplied so that
-                potentially the expectation values can be computed in parallel. Typically this is
-                possible when a finite difference gradient is used by the optimizer such that
-                multiple points to compute the gradient can be passed and if computed in parallel
-                improve overall execution time. Deprecated if a gradient operator or function is
-                given.
-            callback: a callback that can access the intermediate data during the optimization.
-                Three parameter values are passed to the callback as follows during each evaluation
-                by the optimizer for its current set of parameters as it works towards the minimum.
-                These are: the evaluation count, the cost and the parameters for the ansatz
-        """
         super().__init__(
             estimator,
             ansatz,
@@ -179,6 +93,16 @@ class VQLS(BaseSolver):
         }
         self.options = self._validate_solve_options(options)
 
+        # adding a dict to keep timing information of various tasks for benchmarks. Appended to results.
+        self._timing = {
+        # todo: it could be interesting to split the transpile time to gain more insight, e.g. transpile(vector_circuit)?
+            "transpile_time_local": 0.0,  # local transpile time
+            "quantum_time_wall": 0.0,  # wall-clock time around get_values/cost_evaluation
+            "qpu_job_execution_time": 0.0,  # server-side execution as reported by the backend, if available
+            "classical_opt_time": 0.0,  # time spent in classical optimizer
+        }
+        self.circuits_constructed = False
+
         self.supported_decomposition = {
             "pauli": PauliDecomposition,
             "contracted_pauli": ContractedPauliDecomposition,
@@ -194,17 +118,19 @@ class VQLS(BaseSolver):
         self,
         matrix: Union[np.ndarray, QuantumCircuit, List],
         vector: Union[np.ndarray, QuantumCircuit],
+        transpilation_function=None, **transpile_kwargs
     ) -> Tuple[List[QuantumCircuit], List[QuantumCircuit]]:
-        """Returns the a list of circuits required to compute the expectation value
+        """Returns the list of circuits required to compute the expectation value
 
         Args:
             matrix (Union[np.ndarray, QuantumCircuit, List]): matrix of the linear system
-            vector (Union[np.ndarray, QuantumCircuit]): rhs of thge linear system
+            vector (Union[np.ndarray, QuantumCircuit]): rhs of the linear system
+            transpilation_function (Callable, optional): function to do the transpilation of the circuit
 
         Raises:
             ValueError: if vector and matrix have different size
             ValueError: if vector and matrix have different number of qubits
-            ValueError: the input matrix is not a numoy array nor a quantum circuit
+            ValueError: the input matrix is not a numpy array nor a quantum circuit
 
         Returns:
             List[QuantumCircuit]: Quantum Circuits required to compute the cost function
@@ -274,7 +200,7 @@ class VQLS(BaseSolver):
                     )
                 self.matrix_circuits = MatrixDecomposition(circuits=matrix)
 
-            # if its a list of (coefficients, circuits)
+            # if it's a list of (coefficients, circuits)
             elif isinstance(matrix, List):
                 assert isinstance(matrix[0][0], (float, complex))
                 assert isinstance(matrix[0][1], QuantumCircuit)
@@ -300,7 +226,40 @@ class VQLS(BaseSolver):
         else:
             hdmr_tests_overlap = self._get_global_circuits()
 
+        # all circuits are constructed, transpile for backend
+        backend_for_transpile = getattr(getattr(self, "estimator", None), "backend", None)
+        if backend_for_transpile is not None:
+            t0 = time.perf_counter()
+            try:
+                hdmr_tests_norm = self.manually_transpile(hdmr_tests_norm, backend_for_transpile, transpilation_function, **transpile_kwargs)
+                hdmr_tests_overlap = self.manually_transpile(hdmr_tests_overlap, backend_for_transpile, transpilation_function, **transpile_kwargs)
+            finally:
+                self._timing["transpile_time_local"] += time.perf_counter() - t0
+
+        self.hdmr_tests_norm = hdmr_tests_norm
+        self.hdmr_tests_overlap = hdmr_tests_overlap
+        self.circuits_constructed = True
         return hdmr_tests_norm, hdmr_tests_overlap
+
+    @staticmethod
+    def manually_transpile(tests, backend, transpilation_function=None, **transpile_kwargs):
+        """
+        Transpile only raw QuantumCircuit items, leave wrapper objects unchanged.
+
+        If `transpilation_function` is provided it will be called as
+        `transpilation_function(circuit, backend, **transpile_kwargs)`.
+        Otherwise, Qiskit's `transpile` is used: `transpile(circuit, backend=backend, **transpile_kwargs)`.
+        """
+        transpiled = []
+        for t in tests:
+            if isinstance(t, QuantumCircuit):
+                if transpilation_function is None:
+                    transpiled.append(transpile(t, backend=backend, **transpile_kwargs))
+                else:
+                    transpiled.append(transpilation_function(t, backend, **transpile_kwargs))
+            else:
+                transpiled.append(t)
+        return transpiled
 
     def _get_norm_circuits(self) -> List[QuantumCircuit]:
         """construct the circuit for the norm
@@ -328,7 +287,7 @@ class VQLS(BaseSolver):
         elif isinstance(self.matrix_circuits, ContractedPauliDecomposition):
             for circ in self.matrix_circuits.contracted_circuits:
                 hdmr_tests_norm.append(
-                    HadammardTest(  # type: ignore[arg-type]
+                    HadamardTest(  # type: ignore[arg-type]
                         operators=[circ],
                         apply_initial_state=self._ansatz,
                         apply_measurement=False,
@@ -344,7 +303,7 @@ class VQLS(BaseSolver):
                 for jj_mat in range(ii_mat + 1, len(self.matrix_circuits)):
                     mat_j = self.matrix_circuits[jj_mat]
                     hdmr_tests_norm.append(
-                        HadammardTest(  # type: ignore[arg-type]
+                        HadamardTest(  # type: ignore[arg-type]
                             operators=[mat_i.circuit.inverse(), mat_j.circuit],
                             apply_initial_state=self._ansatz,
                             apply_measurement=False,
@@ -378,7 +337,7 @@ class VQLS(BaseSolver):
 
                     # create Hadammard circuit
                     hdmr_tests_overlap.append(
-                        HadammardTest(
+                        HadamardTest(
                             operators=[
                                 mat_i.circuit,
                                 self.vector_circuit.inverse(),
@@ -413,7 +372,7 @@ class VQLS(BaseSolver):
                     mat_j = self.matrix_circuits[jj_mat]
 
                     hdmr_overlap_tests.append(
-                        HadammardOverlapTest(
+                        HadamardOverlapTest(
                             operators=[
                                 self.vector_circuit,
                                 mat_i.circuit,
@@ -444,7 +403,7 @@ class VQLS(BaseSolver):
         hdmr_tests = []
         for mat_i in self.matrix_circuits:
             hdmr_tests.append(
-                HadammardTest(
+                HadamardTest(
                     operators=[self.ansatz, mat_i.circuit, qc_u],
                     apply_control_to_operator=[True, True, False],
                     apply_measurement=False,
@@ -473,7 +432,7 @@ class VQLS(BaseSolver):
         Args:
             hdmr_values_norm (np.ndarray): values of the hadamard test for the norm
             hdmr_values_overlap (np.ndarray): values of the hadamard tests for the overlap
-            coefficient_matrix (np.ndarray): exapnsion coefficients of the matrix
+            coefficient_matrix (np.ndarray): expansion coefficients of the matrix
 
         Returns:
             float: value of the cost function
@@ -507,7 +466,7 @@ class VQLS(BaseSolver):
         hdmr_tests_overlap: List,
         coefficient_matrix: np.ndarray,
     ) -> Callable[[np.ndarray], Union[float, List[float]]]:
-        """Generate the cost function of the minimazation process
+        """Generate the cost function of the minimization process
 
         Args:
             hdmr_tests_norm (List): list of quantum circuits needed to compute the norm
@@ -528,6 +487,7 @@ class VQLS(BaseSolver):
             )
 
         def cost_evaluation(parameters):
+            t0 = time.perf_counter()
             primitive = self.estimator
 
             # compute the values of the norm with optimized/contracted Pauli decomposition
@@ -535,13 +495,13 @@ class VQLS(BaseSolver):
                 ContractedPauliDecomposition,
                 OptimizedPauliDecomposition,
             ]:
-                # switch to sampler primitve if we do measurement optimization
-                BatchTest = BatchHadammardTest
+                # switch to sampler primitive if we do measurement optimization
+                BatchTest = BatchHadamardTest
                 if isinstance(self.matrix_circuits, OptimizedPauliDecomposition):
                     primitive = self.sampler
-                    BatchTest = BatchDirectHadammardTest
+                    BatchTest = BatchDirectHadamardTest
 
-                # compute the hadammard values ofthe unique circuits
+                # compute the hadamard values of the unique circuits
                 hdmr_values_norm = BatchTest(hdmr_tests_norm).get_values(
                     primitive, parameters
                 )
@@ -556,13 +516,13 @@ class VQLS(BaseSolver):
             # compute the norm with other decomposition
             else:
                 # estimate the expected values of the norm circuits
-                hdmr_values_norm = BatchHadammardTest(hdmr_tests_norm).get_values(
+                hdmr_values_norm = BatchHadamardTest(hdmr_tests_norm).get_values(
                     primitive, parameters
                 )
 
             # switch primitive to sampler if we do overlap test
             primitive = self.estimator
-            BatchTest = BatchHadammardTest
+            BatchTest = BatchHadamardTest
             if self.options["use_overlap_test"]:
                 primitive = self.sampler
                 BatchTest = BatchHadammardOverlapTest
@@ -589,13 +549,13 @@ class VQLS(BaseSolver):
                     end="\r",
                     flush=True,
                 )
-
+            self._timing["quantum_time_wall"] +=  time.perf_counter() - t0
             return cost
 
         return cost_evaluation
 
     def _validate_solve_options(self, options: Union[Dict, None]) -> Dict:
-        """validate the options used for the solve methods
+        """Validate the options used for the solve methods
 
         Args:
             options (Union[Dict, None]): options
@@ -655,7 +615,8 @@ class VQLS(BaseSolver):
         """
 
         # compute the circuits needed for the hadamard tests
-        hdmr_tests_norm, hdmr_tests_overlap = self.construct_circuit(matrix, vector)
+        if not self.circuits_constructed:
+            self.construct_circuit(matrix, vector)
 
         # compute he coefficient matrix
         coefficient_matrix = self.get_coefficient_matrix(
@@ -673,17 +634,19 @@ class VQLS(BaseSolver):
 
         # get the cost evaluation function
         cost_evaluation = self.get_cost_evaluation_function(
-            hdmr_tests_norm, hdmr_tests_overlap, coefficient_matrix
+            self.hdmr_tests_norm, self.hdmr_tests_overlap, coefficient_matrix
         )
 
+        opt_start = time.perf_counter()
         if callable(self.optimizer):
-            opt_result = self.optimizer(  # pylint: disable=not-callable
-                fun=cost_evaluation, x0=initial_point, jac=gradient, bounds=bounds
-            )
+            opt_result = self.optimizer(fun=cost_evaluation, x0=initial_point, jac=gradient, bounds=bounds) # pylint: disable=not-callable
         else:
-            opt_result = self.optimizer.minimize(
-                fun=cost_evaluation, x0=initial_point, jac=gradient, bounds=bounds
-            )
+            opt_result = self.optimizer.minimize(fun=cost_evaluation, x0=initial_point, jac=gradient, bounds=bounds)
+        opt_time = time.perf_counter() - opt_start
+        # opt.minimize() contains all evaluations of the quantum cost function, therefore need to subtract those here.
+        opt_time = opt_time - self._timing["quantum_time_wall"]
+        self._timing["classical_opt_time"] = self._timing["classical_opt_time"] + opt_time
+
 
         # create the solution
         solution = VariationalLinearSolverResult()
@@ -692,12 +655,22 @@ class VQLS(BaseSolver):
         solution.optimal_point = opt_result.x
         solution.optimal_parameters = dict(zip(self.ansatz.parameters, opt_result.x))
         solution.optimal_value = opt_result.fun
+        # todo: should this not rather be solution.optimizer_evals ?
         solution.cost_function_evals = opt_result.nfev
+        #todo: solution.optimizer_result ?
 
         # final ansatz
+        # todo: should this not rather be solution.optimal_circuit ?
         solution.state = self.ansatz.assign_parameters(solution.optimal_parameters)
 
         # solution vector
         solution.vector = np.real(Statevector(solution.state).data)
+
+        # attach a copy of the timing dict to the results for the caller's inspection, e.g. benchmarking
+        solution.transpile_time_local = self._timing["transpile_time_local"]
+        solution.quantum_time_wall = self._timing["quantum_time_wall"]
+        solution.qpu_job_execution_time = self._timing["qpu_job_execution_time"]
+        # todo: should this rather be solution.optimizer_time?
+        solution.classical_opt_time = self._timing["classical_opt_time"]
 
         return solution

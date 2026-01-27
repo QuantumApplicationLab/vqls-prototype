@@ -10,7 +10,7 @@ from vqls_prototype.primitives_run_builder import SamplerRunBuilder
 
 
 class BatchHadammardOverlapTest:
-    r"""Class that execute batches of Hadammard Test"""
+    r"""Class that execute batches of Hadamard Test"""
 
     def __init__(self, hdmr_list: List):
         """Create a single container that computes many hadamard tests
@@ -27,7 +27,7 @@ class BatchHadammardOverlapTest:
         """Compute the value of the test
 
         Args:
-            sampler (Estimator): an sampler instance
+            sampler (Sampler): an sampler instance
             parameter_sets (List): The list of parameter values for the circuit
 
         Returns:
@@ -66,7 +66,7 @@ class BatchHadammardOverlapTest:
         return results.reshape(-1, 2).sum(1).reshape(-1)
 
 
-class HadammardOverlapTest:
+class HadamardOverlapTest:
     r"""Class to compute the Hadamard Test"""
 
     def __init__(
@@ -243,10 +243,10 @@ class HadammardOverlapTest:
         """Post process the sampled values of the circuits
 
         Args:
-            sampler_result (results): Result of the sampler
+            sampler_result: Result of the sampler
 
         Returns:
-            List: value of the overlap hadammard test
+            Complex numpy array: value of the overlap hadamard test
         """
         if isinstance(sampler_result, SamplerResult):
             quasi_dist = sampler_result.quasi_dists
@@ -286,11 +286,11 @@ class HadammardOverlapTest:
         """Compute and return the value of Hadmard overlap test
 
         Args:
-            sampler (Sampler): a Sampler primitive to extract the output of the circuits
-            parameter_sets (List): the parameters of the variational circuits
+            sampler: a Sampler primitive to extract the output of the circuits
+            parameter_sets: the parameters of the variational circuits
 
         Returns:
-            float: value of the overlap hadammard test
+            float: value of the overlap hadamard test
         """
         ncircuits = len(self.circuits)
         all_parameter_sets = [parameter_sets] * ncircuits
