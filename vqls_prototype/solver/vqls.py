@@ -655,15 +655,22 @@ class VQLS(BaseSolver):
         solution.optimal_point = opt_result.x
         solution.optimal_parameters = dict(zip(self.ansatz.parameters, opt_result.x))
         solution.optimal_value = opt_result.fun
+        # todo: should this not rather be solution.optimizer_evals ?
         solution.cost_function_evals = opt_result.nfev
+        #todo: solution.optimizer_result ?
 
         # final ansatz
+        # todo: should this not rather be solution.optimal_circuit ?
         solution.state = self.ansatz.assign_parameters(solution.optimal_parameters)
 
         # solution vector
         solution.vector = np.real(Statevector(solution.state).data)
 
-        # attach a copy of the timing dict for the caller's inspection
-        solution.timing = dict(self._timing)
+        # attach a copy of the timing dict to the results for the caller's inspection, e.g. benchmarking
+        solution.transpile_time_local = self._timing["transpile_time_local"]
+        solution.quantum_time_wall = self._timing["quantum_time_wall"]
+        solution.qpu_job_execution_time = self._timing["qpu_job_execution_time"]
+        # todo: should this rather be solution.optimizer_time?
+        solution.classical_opt_time = self._timing["classical_opt_time"]
 
         return solution

@@ -30,6 +30,15 @@ class VariationalLinearSolverResult(VariationalResult):
 
     def __init__(self) -> None:
         super().__init__()
+        # todo: it seems super()._optimizer_time does not get populated by the prototype
+        # todo: write tests
+        self._cost_function_evals: int | None = None
+        self._state: Union[QuantumCircuit, np.ndarray] | None = None
+        self._vector: Union[np.ndarray, None] | None = None
+        self._transpile_time_local: float | None = None
+        self._quantum_time_wall: float | None = None
+        self._qpu_job_execution_time: float | None = None
+        self._classical_opt_time: float | None = None
 
     @property
     def cost_function_evals(self) -> Optional[int]:
@@ -70,6 +79,46 @@ class VariationalLinearSolverResult(VariationalResult):
             vector: The solution vector.
         """
         self._vector = vector
+
+    @property
+    def transpile_time_local(self) -> Optional[int]:
+        """Returns local transpilation time in seconds."""
+        return self._transpile_time_local
+
+    @transpile_time_local.setter
+    def transpile_time_local(self, value: int) -> None:
+        """Sets local transpilation time in seconds."""
+        self._transpile_time_local = value
+
+    @property
+    def quantum_time_wall(self) -> Optional[int]:
+        """Returns quantum execution wall time in seconds."""
+        return self._quantum_time_wall
+
+    @quantum_time_wall.setter
+    def quantum_time_wall(self, value: int) -> None:
+        """Sets quantum execution wall time in seconds."""
+        self._quantum_time_wall = value
+
+    @property
+    def qpu_job_execution_time(self) -> Optional[int]:
+        """Returns quantum execution time as reported by the QPU job in seconds."""
+        return self._qpu_job_execution_time
+
+    @qpu_job_execution_time.setter
+    def qpu_job_execution_time(self, value: int) -> None:
+        """Sets quantum execution time as reported by the QPU job in seconds"""
+        self._qpu_job_execution_time = value
+
+    @property
+    def classical_opt_time(self) -> Optional[int]:
+        """Returns time taken for classical optimization in seconds."""
+        return self._classical_opt_time
+
+    @classical_opt_time.setter
+    def classical_opt_time(self, value: int) -> None:
+        """Sets time taken for classical optimization in seconds."""
+        self._classical_opt_time = value
 
 
 class VariationalLinearSolver(ABC):
